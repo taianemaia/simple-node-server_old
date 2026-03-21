@@ -1,0 +1,9 @@
+jobs: 
+  my-job: 
+    runs-on: ubuntu-latest 
+      steps: 
+      - uses: <name-of-gh-action> 
+      - name: Run a script
+        run: ls -la 
+      - name: Run another script
+        run: echo "done"
