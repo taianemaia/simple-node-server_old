@@ -89,12 +89,23 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Run the shell script to get or create the Render service, then deploy
-      - name: Get or create Render service and deploy
+      # Step 1: Get the Render service ID (creates the service if it doesn't exist yet)
+      - name: Get or create Render service
+        id: render-service
         run: |
-          chmod +x ./scripts/render-deploy.sh
-          SERVICE_ID=$(./scripts/render-deploy.sh simple-node-server | grep "ID:" | awk '{print $NF}')
-          curl -f -X POST "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
-            --header "Authorization: Bearer $RENDER_API_KEY"
+          chmod +x ./scripts/render-get-service-id.sh
+          IMAGE_PATH="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/simple-node-server:latest"
+          SERVICE_ID=$(./scripts/render-get-service-id.sh simple-node-server "$IMAGE_PATH")
+          echo "service_id=$SERVICE_ID" >> $GITHUB_OUTPUT
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+
+      # Step 2: Trigger a new deployment on Render using the service ID from Step 1
+      - name: Trigger Render deploy
+        run: |
+          curl -f -X POST \
+            "https://api.render.com/v1/services/${{ steps.render-service.outputs.service_id }}/deploys" \
+            --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            --header "Content-Type: application/json"
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
